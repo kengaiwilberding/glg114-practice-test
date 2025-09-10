@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GLG 114 Practice Midterm — MSU</title>
+<style>
+  body {
+    margin:0;
+    font-family: system-ui, Arial, sans-serif;
+    background: #0b1220;
+    color: #e6eefc;
+  }
+  header {
+    background:#121a2b;
+    border-bottom:1px solid #1f2a44;
+    padding:14px 18px;
+    position:sticky;top:0;
+    z-index:5;
+  }
+  h1 { margin:0; font-size:20px; }
+  .controls { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  select,button {
+    background:#0d162b; color:#e6eefc;
+    border:1px solid #263a63; border-radius:8px;
+    padding:8px 12px; font-size:14px; cursor:pointer;
+  }
+  button:hover { background:#17345a; }
+  main { padding:20px; max-width:900px; margin:auto; }
+  .question-card {
+    background:#0f192f;
+    border:1px solid #1e2c4b;
+    border-radius:12px;
+    padding:16px; margin:14px 0;
+  }
+  .qtext { font-size:16px; margin-bottom:10px; }
+  .choice { padding:8px; border:1px solid #23365e; border-radius:6px; margin:6px 0; cursor:pointer; }
+  .choice.correct { border-color:green; background:#143c1a; }
+  .choice.incorrect { border-color:red; background:#3c1a1a; }
+  .explain { margin-top:8px; font-size:14px; color:#9fb0cc; display:none; }
+  .nav { display:flex; gap:10px; margin-top:12px; }
+  #result { font-size:18px; margin-top:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>GLG 114 Practice Midterm — Chapters 2–5</h1>
+  <div class="controls">
+    <select id="chapterSelect">
+      <option value="all">All Chapters</option>
+      <option value="2">Chapter 2 — Rocks & Minerals</option>
+      <option value="3">Chapter 3 — Plate Tectonics</option>
+      <option value="4">Chapter 4 — Earthquakes</option>
+      <option value="5">Chapter 5 — Volcanoes</option>
+    </select>
+    <select id="numQuestions">
+      <option value="20">20 Questions</option>
+      <option value="10">10 Questions</option>
+      <option value="30">30 Questions</option>
+      <option value="50">50 Questions</option>
+    </select>
+    <button id="startBtn">Start Test</button>
+    <button id="submitBtn">Submit</button>
+    <button id="showAllBtn">Show Correct</button>
+  </div>
+</header>
+
+<main>
+  <div id="questions"></div>
+  <div id="result"></div>
+</main>
+
+<script>
+// ---------------- Question bank ----------------
+const BANK = [
+  {chapter:2,q:"Which is the best definition of a mineral?",choices:[
+    "Naturally occurring, organic solid with variable composition",
+    "Naturally occurring, inorganic, crystalline solid with definite composition",
+    "Man-made, crystalline solid with definite composition",
+    "Any substance with metallic luster"
+  ],answer:1,explain:"Minerals are naturally occurring, inorganic, crystalline solids with a specific chemical composition."},
+  {chapter:2,q:"The most abundant mineral group in Earth’s crust is:",choices:["Carbonates","Oxides","Silicates","Sulfates"],answer:2,explain:"Silicate minerals dominate the crust; built from the SiO4 tetrahedron."},
+  {chapter:3,q:"Pangaea is the name for:",choices:["Ancient ocean","Supercontinent","Volcanic arc","Trench"],answer:1,explain:"Pangaea began breaking apart in the Mesozoic."},
+  {chapter:4,q:"Elastic rebound theory explains:",choices:["Volcanic eruptions","Earthquake generation on faults","Metamorphism","Mineral growth"],answer:1,explain:"Strain accumulates; sudden slip releases energy as seismic waves."},
+  {chapter:5,q:"Mafic magma is characterized by:",choices:["High viscosity, explosive","Low viscosity, gentle","High silica, sticky","Gas-rich"],answer:1,explain:"Basaltic mafic magma is fluid; gases escape more easily—effusive eruptions."}
+];
+
+// Shuffle
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]];} return arr; }
+
+let test = [], answers={}, submitted=false;
+
+// Build test
+function buildTest(){
+  submitted=false; answers={};
+  let chapter=document.getElementById("chapterSelect").value;
+  let n=parseInt(document.getElementById("numQuestions").value,10);
+  let pool=BANK.slice();
+  if(chapter!=="all") pool=pool.filter(q=>q.chapter==chapter);
+  shuffle(pool);
+  test=pool.slice(0,n);
+  renderQuestions();
+}
+
+// Render
+function renderQuestions(){
+  const container=document.getElementById("questions");
+  container.innerHTML="";
+  test.forEach((q,idx)=>{
+    const card=document.createElement("div"); card.className="question-card";
+    const qt=document.createElement("div"); qt.className="qtext"; qt.textContent=(idx+1)+". "+q.q;
+    card.appendChild(qt);
+    q.choices.forEach((c,i)=>{
+      const div=document.createElement("div");
+      div.className="choice"; div.textContent=c;
+      div.onclick=()=>{answers[idx]=i;};
+      card.appendChild(div);
+    });
+    const ex=document.createElement("div"); ex.className="explain"; ex.textContent="Explanation: "+q.explain;
+    card.appendChild(ex);
+    container.appendChild(card);
+  });
+}
+
+// Submit
+function submitTest(){
+  if(submitted) return; submitted=true;
+  let correct=0;
+  document.querySelectorAll(".question-card").forEach((card,idx)=>{
+    let chosen=answers[idx];
+    let q=test[idx];
+    let choices=card.querySelectorAll(".choice");
+    choices.forEach((div,i)=>{
+      div.classList.remove("correct","incorrect");
+      if(i===q.answer) div.classList.add("correct");
+      if(chosen!=null && i===chosen && chosen!==q.answer) div.classList.add("incorrect");
+    });
+    card.querySelector(".explain").style.display="block";
+    if(chosen===q.answer) correct++;
+  });
+  document.getElementById("result").textContent="Score: "+correct+"/"+test.length+" ("+Math.round(100*correct/test.length)+"%)";
+}
+
+// Show all
+function showAll(){
+  document.querySelectorAll(".question-card").forEach((card,idx)=>{
+    card.querySelector(".explain").style.display="block";
+    let q=test[idx];
+    let choices=card.querySelectorAll(".choice");
+    choices.forEach((div,i)=>{ if(i===q.answer) div.classList.add("correct"); });
+  });
+}
+
+// Events
+document.getElementById("startBtn").onclick=buildTest;
+document.getElementById("submitBtn").onclick=submitTest;
+document.getElementById("showAllBtn").onclick=showAll;
+</script>
+</body>
+</html>
